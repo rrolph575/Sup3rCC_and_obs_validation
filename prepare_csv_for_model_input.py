@@ -10,7 +10,7 @@ datapath = 'Data'
 # Files contain 2m temp, 2m max and min temp, 2m relative humidity
 files = {
     'SE': 'ds_tas_tasmax_tasmin_hurs_Orlando_Intl_ec_earth3_veg.nc', 
-    'NW': 'ds_tas_tasmax_tasmin_hurs_Mt_Plymouth_ec_earth3_veg.nc'
+    'NW': 'ds_tas_tasmax_tasmin_hurs_Mt_Plymouth_ec_earth3_veg.nc' # This one seems to only has time of observation temp so comparison is not as good to average temp
 }
 
 for key, ifile in files.items():

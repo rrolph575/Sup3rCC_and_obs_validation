@@ -11,16 +11,24 @@ from matplotlib.patches import Patch
 ### Define paths
 datapath = 'Data/'
 
+
+## Select if you want to look at southeast (SE) or northwest (NW) region of Orlando
+loc = 'SE' # for now only 'SE' available to run because NW seems to only have time of observation temp and not avearge temp. Can add NW obs data here if available.
+
 ### Read met station data (1 Jan 2020-1 Jan 2025)
-obs_df = pd.read_csv(datapath + 'GHCNd_met_station_orlando_intl.csv') 
-### Read CMIP data
+if loc == 'SE':
+    obs_df = pd.read_csv(datapath + 'GHCNd_met_station_orlando_intl.csv') 
+elif loc == 'NW':
+    obs_df = pd.read_csv(datapath)
+
+### Read CMIP model data
 files = {
     'SE': 'ds_tas_tasmax_tasmin_hurs_Orlando_Intl_ec_earth3_veg.nc',
     'NW': 'ds_tas_tasmax_tasmin_hurs_Mt_Plymouth_ec_earth3_veg.nc'
 }
 
 
-cmip_ds = xr.open_dataset(f'{datapath}/{files["SE"]}', engine='h5netcdf')
+cmip_ds = xr.open_dataset(f'{datapath}/{files[loc]}', engine='h5netcdf')
 # Extract 2m temp to compare
 temp_daily = cmip_ds['tas'] - 273.15 # convert from K to C
 
@@ -49,9 +57,9 @@ temp_daily = cmip_ds['tas'] - 273.15 # convert from K to C
 
 
 
-def plot_multiyear_window_max_climatology(temp_daily, obs_df, 
+def plot_multiyear_window_climatology(temp_daily, obs_df, 
                                           start_year=2019, end_year=2024,
-                                          threshold=30, temp_metric=None):
+                                          threshold=30, temp_metric='Avg'):
     """
     For each day-of-year (1..365), compute the maximum temperature across all
     years in the window for both observations and model. Produce a 365-day plot,
@@ -69,9 +77,12 @@ def plot_multiyear_window_max_climatology(temp_daily, obs_df,
         obs_tmax_c = (obs_win["TMAX"] - 32) * 5/9 # convert F to C
         obs_by_doy = obs_tmax_c.groupby(obs_tmax_c.index.dayofyear).max()
         obs_curve = obs_by_doy.reindex(range(1, 366))
-    obs_t_c = (obs_win["TAVG"] - 32) * 5/9 # convert F to C
-    obs_by_doy = obs_t_c.groupby(obs_t_c.index.dayofyear)
-    obs_curve = obs_by_doy.max().reindex(range(1, 366))
+        temp_metric_label = "Max"
+    else:
+        temp_metric_label = "Average"
+        obs_t_c = (obs_win["TAVG"] - 32) * 5/9 # convert F to C
+        obs_by_doy = obs_t_c.groupby(obs_t_c.index.dayofyear)
+        obs_curve = obs_by_doy.mean().reindex(range(1, 366))
 
     # -------------------------
     # MODEL
@@ -85,8 +96,8 @@ def plot_multiyear_window_max_climatology(temp_daily, obs_df,
     # PLOTTING
     # -------------------------
     fig, ax = plt.subplots(figsize=(12,5))
-    ax.plot(obs_curve.index, obs_curve.values, label="Observed Max Across Window", color="blue")
-    ax.plot(model_curve.index, model_curve.values, label="Model Max Across Window", color="red")
+    ax.plot(obs_curve.index, obs_curve.values, label=f"Observed {temp_metric_label} Across Window", color="blue")
+    ax.plot(model_curve.index, model_curve.values, label=f"Model {temp_metric_label} Across Window", color="red")
     
     # Threshold line
     ax.axhline(threshold, linestyle="--", color="k", linewidth=1)
@@ -107,7 +118,7 @@ def plot_multiyear_window_max_climatology(temp_daily, obs_df,
     ax.set_xticklabels(month_labels)
 
     ax.set_xlabel("Month")
-    ax.set_ylabel("Max Temperature Across Window (°C)")
+    ax.set_ylabel(f"{temp_metric_label} Temperature Across Window (°C)")
     if temp_metric == 'max_temp':
         ax.set_title(f"Multi-Year Maximum Daily Max Temperature Climatology ({start_year}–{end_year})")
     else: 
@@ -128,7 +139,7 @@ def plot_multiyear_window_max_climatology(temp_daily, obs_df,
             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.5))
 
     plt.tight_layout()
-    plt.savefig(f'Figures/multiyear_window_max_climatology_{start_year}_{end_year}.png')
+    plt.savefig(f'Figures/multiyear_window_{temp_metric_label}_climatology_{start_year}_{end_year}.png')
     #plt.show()
 
     return obs_curve, model_curve, obs_days, model_days, diff_days
@@ -136,7 +147,10 @@ def plot_multiyear_window_max_climatology(temp_daily, obs_df,
 
 
 ###% Procedure
-plot_multiyear_window_max_climatology(temp_daily, obs_df,
+plot_multiyear_window_climatology(temp_daily, obs_df,
                                           start_year=2015, end_year=2024,
-                                          threshold=30)
+                                          threshold=30, temp_metric='Avg')  
 
+# Notes on function:
+# set temp_metric = max_temp if you want to compare daily maxiumum temp 
+# threshold is temperature threshold for comparison in degrees celsius
