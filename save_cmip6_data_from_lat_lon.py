@@ -18,9 +18,10 @@ def load_cmip6_dataset():
     # tas_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20150101-20151231.nc
     # tasmax_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20150101-20151231.nc
     # tasmin_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20150101-20151231.nc
-    files_tas = os.path.join(cmip6_datapath, 'tas_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20*.nc')
+    files_tas = os.path.join(cmip6_datapath, 'tas_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20*.nc')  # near surface air temp
     files_tasmax = os.path.join(cmip6_datapath, 'tasmax_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20*.nc')
     files_tasmin = os.path.join(cmip6_datapath, 'tasmin_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20*.nc')
+    files_hurs = os.path.join(cmip6_datapath, 'hurs_day_EC-Earth3-Veg_ssp245_r1i1p1f1_gr_20*.nc')  # relative humidity at surface
 
     open_kwargs = dict(
     combine='by_coords',
@@ -35,8 +36,9 @@ def load_cmip6_dataset():
     ds_tas = xr.open_mfdataset(files_tas, **open_kwargs)
     ds_tasmax = xr.open_mfdataset(files_tasmax, **open_kwargs)
     ds_tasmin = xr.open_mfdataset(files_tasmin, **open_kwargs)
+    ds_hurs = xr.open_mfdataset(files_hurs, **open_kwargs)
 
-    ds = xr.merge([ds_tas, ds_tasmax, ds_tasmin])  
+    ds = xr.merge([ds_tas, ds_tasmax, ds_tasmin, ds_hurs])  
 
     return ds
 
@@ -47,51 +49,41 @@ def save_cmip6_data_from_lat_lon(ds, station_name, lat0, lon0):
         lat0 (float): Latitude of the target location.
         lon0 (float): Longitude of the target location.
     """
-    filename = f'ds_tas_tasmax_tasmin_{station_name}_ec_earth3_veg.nc'
-    if not os.path.exists(f'Data/{filename}'):
+    filename = f'ds_tas_tasmax_tasmin_hurs_{station_name}_ec_earth3_veg.nc'
             
-            # Convert station lon to 0–360 because our station lat/lon are in -180 to 180 degree format and cmip is in 0-360 format
-            lon0 = lon0 % 360
+    # Convert station lon to 0–360 because our station lat/lon are in -180 to 180 degree format and cmip is in 0-360 format
+    lon0 = lon0 % 360
 
-            # compute distance to each point (lazy Dask array)
-            #dist = ((ds.lat - lat0)**2 + (ds.lon - lon0)**2)
+    # compute distance to each point (lazy Dask array)
+    #dist = ((ds.lat - lat0)**2 + (ds.lon - lon0)**2)
 
-            # get index of the minimum distance
-            #target_idx = dist.argmin(dim='lat').argmin(dim='lon').compute()
+    # get index of the minimum distance
+    #target_idx = dist.argmin(dim='lat').argmin(dim='lon').compute()
 
-            # select timeseries data with the target index
-            #ds_ts = ds.isel(lat=target_idx['lat'], lon=target_idx['lon'])
-                
-            ds_ts = ds.sel(
-            lat=lat0,
-            lon=lon0,
-            method="nearest"
-            )
+    # select timeseries data with the target index
+    #ds_ts = ds.isel(lat=target_idx['lat'], lon=target_idx['lon'])
+        
+    ds_ts = ds.sel(
+    lat=lat0,
+    lon=lon0,
+    method="nearest"
+    )
 
 
-            # Save to NetCDF
-            ds_ts.to_netcdf(f"Data/{filename}", engine="netcdf4", format="NETCDF4")
-            print(f'File was created and saved to Data/{filename}')
+    # Save to NetCDF
+    ds_ts.to_netcdf(f"Data/{filename}", engine="netcdf4", format="NETCDF4")
+    print(f'File was created and saved to Data/{filename}')
 
-            return ds_ts
+    return ds_ts
 
-    else:
-        # Read from file 
-        ds_ts = xr.open_dataset(f"Data/{filename}")
-        print(
-            "File exists. First 5 days of tasmax:\n",
-            ds_ts["tasmax"].isel(time=slice(0, 5))
-        )
-        return ds_ts
+
 
 
 # %% Procedure
 def main():
     stations = {
-        "Mt_Plymouth": (28.799, -81.537),
-        "OCOEE1_4N": (28.593, -81.529),
-        "Orlando_Intl": (28.418, -81.324),
-        "Orlando4_8NNW": (28.572, -81.396)
+        "Mt_Plymouth": (28.799, -81.537), #NW orlando
+        "Orlando_Intl": (28.418, -81.324) # orlando intl, SE orlando
     }
 
     if len(sys.argv) < 2:
