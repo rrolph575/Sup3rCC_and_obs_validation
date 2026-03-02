@@ -19,7 +19,15 @@ for key, ifile in files.items():
     # Convert Kelvin to Celsius
     df['tas'] = df['tas'] - 273.15
     df['tasmax'] = df['tasmax'] - 273.15
+    # Rename columns to match requested column names
+    df = df.rename(columns={
+        'time': 'time_index',
+        'tas': 'temperature_2m',
+        'tasmax': 'max_temp',
+        'hurs': 'relativehumidity_2m',
+        'lon': 'longitude',
+        'lat': 'latitude'
+    })
     # Save to csv
     df.to_csv(f'{datapath}/model_input_{key}.csv', index=False)
-
-
+    

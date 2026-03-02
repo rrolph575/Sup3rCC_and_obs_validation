@@ -30,7 +30,14 @@ files = {
 
 cmip_ds = xr.open_dataset(f'{datapath}/{files[loc]}', engine='h5netcdf')
 # Extract 2m temp to compare
-temp_daily = cmip_ds['tas'] - 273.15 # convert from K to C
+temp_metric = 'Avg' # set temp_metric = max_temp if you want to compare daily maxiumum temp , and 'Avg' if you want to compare average temp
+#temp_metric = 'max_temp'
+
+
+if temp_metric == 'Avg':
+    temp_daily = cmip_ds['tas'] - 273.15 # convert from K to C
+if temp_metric == 'max_temp':
+    temp_daily = cmip_ds['tasmax'] - 273.15 # convert from K to C
 
 
 ### Met station data (from https://www.ncei.noaa.gov/cdo-web/search) 
@@ -59,7 +66,7 @@ temp_daily = cmip_ds['tas'] - 273.15 # convert from K to C
 
 def plot_multiyear_window_climatology(temp_daily, obs_df, 
                                           start_year=2019, end_year=2024,
-                                          threshold=30, temp_metric='Avg'):
+                                          threshold=30, temp_metric=temp_metric):
     """
     For each day-of-year (1..365), compute the maximum temperature across all
     years in the window for both observations and model. Produce a 365-day plot,
@@ -75,21 +82,24 @@ def plot_multiyear_window_climatology(temp_daily, obs_df,
     obs_win = obs_df[mask].set_index("DATE")
     if temp_metric == 'max_temp':
         obs_tmax_c = (obs_win["TMAX"] - 32) * 5/9 # convert F to C
-        obs_by_doy = obs_tmax_c.groupby(obs_tmax_c.index.dayofyear).max()
-        obs_curve = obs_by_doy.reindex(range(1, 366))
+        obs_by_doy = obs_tmax_c.groupby(obs_tmax_c.index.dayofyear).max() # takes the maximum of each day across all years
+        obs_curve = obs_by_doy.reindex(range(1, 366)) 
         temp_metric_label = "Max"
     else:
-        temp_metric_label = "Average"
+        temp_metric_label = "Avg"
         obs_t_c = (obs_win["TAVG"] - 32) * 5/9 # convert F to C
-        obs_by_doy = obs_t_c.groupby(obs_t_c.index.dayofyear)
-        obs_curve = obs_by_doy.mean().reindex(range(1, 366))
+        obs_by_doy = obs_t_c.groupby(obs_t_c.index.dayofyear).mean()  # takes the average of each day across all years
+        obs_curve = obs_by_doy.reindex(range(1, 366))
 
     # -------------------------
     # MODEL
     # -------------------------
     model_win = temp_daily.sel(time=slice(str(start_year), str(end_year)))
     model_series = model_win.to_pandas().squeeze()
-    model_by_doy = model_series.groupby(model_series.index.dayofyear).max()
+    if temp_metric == 'max_temp':
+        model_by_doy = model_series.groupby(model_series.index.dayofyear).max()
+    if temp_metric == 'Avg':
+        model_by_doy = model_series.groupby(model_series.index.dayofyear).mean()
     model_curve = model_by_doy.reindex(range(1, 366))
 
     # -------------------------
@@ -149,8 +159,7 @@ def plot_multiyear_window_climatology(temp_daily, obs_df,
 ###% Procedure
 plot_multiyear_window_climatology(temp_daily, obs_df,
                                           start_year=2015, end_year=2024,
-                                          threshold=30, temp_metric='Avg')  
+                                          threshold=30, temp_metric=temp_metric)  
 
 # Notes on function:
-# set temp_metric = max_temp if you want to compare daily maxiumum temp 
 # threshold is temperature threshold for comparison in degrees celsius
