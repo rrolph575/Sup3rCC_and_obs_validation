@@ -7,6 +7,7 @@ from scipy.stats import gaussian_kde
 from rex import MultiFileResourceX, ResourceX
 import xarray as xr
 from matplotlib.patches import Patch
+import sys
 
 ### Define paths
 supercc_datapath = '/datasets/sup3rcc/conus_ecearth3veg_ssp245_r1i1p1f1/v0.2.2/' 
@@ -85,7 +86,6 @@ def save_supercc_data_from_lat_lon(ds_super_all, station_name, lat0, lon0):
 
 
 # %% Procedure
-import sys
 
 # %% Procedure
 def main():
